@@ -12,8 +12,8 @@ const App = () => {
 
         // Set backend URLs
         const backends = isLocal
-            ? ['http://localhost:5001', 'http://localhost:5002'] // Local development URLs
-            : [`http://${host}:5001`, `http://${host}:5002`]; //  cloud IPs
+            ? ['http://localhost:5000', 'http://localhost:5001'] // Local development URLs
+            : [`http://${host}:5000`, `http://${host}:5001`]; //  cloud IPs
 
         // Pick a backend dynamically
         const randomBackend = backends[Math.floor(Math.random() * backends.length)];
