@@ -6,7 +6,7 @@ on:
       - dev
 
 jobs:
-  build_and_push:
+  build_push:
     runs-on: ubuntu-latest
 
     steps:
