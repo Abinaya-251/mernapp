@@ -59,7 +59,7 @@ jobs:
       - name: Build frontend Docker image
         run: |
           FRONTEND_TAG="$(date +%s)"
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:$FRONTEND_TAG -f dockerfile-frontend ./frontend
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:$FRONTEND_TAG -f ./frontend/dockerfile-frontend ./frontend
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:$FRONTEND_TAG
           echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
         if: steps.check_env_change.outputs.skipped != 'true'
@@ -67,7 +67,7 @@ jobs:
       - name: Build backend Docker image
         run: |
           BACKEND_TAG="$(date +%s)"
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:$BACKEND_TAG -f dockerfile-backend ./backend
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:$BACKEND_TAG -f ./backend/dockerfile-backend ./backend
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:$BACKEND_TAG
           echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
         if: steps.check_env_change.outputs.skipped != 'true'
