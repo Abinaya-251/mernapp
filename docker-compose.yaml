@@ -11,7 +11,7 @@ services:
 
   backend1:
     image: "${BACKEND_IMAGE_NAME}:${BACKEND_IMAGE_TAG}"
-    container_name: backend1
+    container_name: backend11
     ports:
       - "5000:5000"
     networks:
