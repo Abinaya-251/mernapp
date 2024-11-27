@@ -3,9 +3,8 @@ name: CD Workflow
 on:
   workflow_run:
     workflows: ["CI Workflow"]
-    types:
-      - completed
-
+    types: [completed]branches:
+      - 'dev'
 jobs:
   deploy:
     runs-on: ubuntu-latest
