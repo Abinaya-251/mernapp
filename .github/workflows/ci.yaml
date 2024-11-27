@@ -1,0 +1,88 @@
+name: CI Workflow
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check if only .env file was modified
+        id: check_env_change
+        run: |
+          git diff --exit-code .env || echo "Only .env file changed, skipping build"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/buildx
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Install dependencies for frontend
+        working-directory: ./frontend
+        run: |
+          npm install
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Install dependencies for backend
+        working-directory: ./backend
+        run: |
+          npm install
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Build frontend Docker image
+        run: |
+          FRONTEND_TAG="$(date +%s)"
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:$FRONTEND_TAG ./frontend
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:$FRONTEND_TAG
+          echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Build backend Docker image
+        run: |
+          BACKEND_TAG="$(date +%s)"
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:$BACKEND_TAG ./backend
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:$BACKEND_TAG
+          echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Update .env file with new image tags
+        run: |
+          sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${{ env.FRONTEND_TAG }}|g" .env
+          sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${{ env.BACKEND_TAG }}|g" .env
+        if: steps.check_env_change.outputs.skipped != 'true'
+
+      - name: Commit and push .env changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .env
+          git commit -m "Update .env with new image tags"
+          git push origin dev
+        if: steps.check_env_change.outputs.skipped != 'true'
