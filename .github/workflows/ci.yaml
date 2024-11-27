@@ -13,14 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Check if only .env file was modified
-        id: check_env_change
-        run: |
-          git diff --exit-code .env || echo "Only .env file changed, skipping build"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Cache Docker layers
         uses: actions/cache@v2
@@ -29,19 +24,16 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Install dependencies for frontend
         working-directory: ./frontend
         run: |
           npm install
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Install dependencies for backend
         working-directory: ./backend
         run: |
           npm install
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
@@ -49,12 +41,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Login to Amazon ECR
         run: |
           aws ecr-public get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin public.ecr.aws/d6g9y3v8
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Build frontend Docker image
         run: |
@@ -63,7 +53,6 @@ jobs:
           docker tag frontend:$FRONTEND_TAG public.ecr.aws/d6g9y3v8/frontend/reactapp:$FRONTEND_TAG
           docker push public.ecr.aws/d6g9y3v8/frontend/reactapp:$FRONTEND_TAG
           echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Build backend Docker image
         run: |
@@ -72,19 +61,9 @@ jobs:
           docker tag frontend:$FRONTEND_TAG public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
           docker push  public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
           echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
-        if: steps.check_env_change.outputs.skipped != 'true'
 
       - name: Update .env file with new image tags
         run: |
           sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${{ env.FRONTEND_TAG }}|g" .env
           sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${{ env.BACKEND_TAG }}|g" .env
-        if: steps.check_env_change.outputs.skipped != 'true'
 
-      - name: Commit and push .env changes
-        run: |
-          git config user.name "Abinaya-251"
-          git config user.email "aabinayaantony251@gmail.com"
-          git add .env
-          git commit -m "Update .env with new image tags"
-          git push https://x-access-token:${{ secrets.TOKEN }}@github.com/${{ github.repository }}.git HEAD:dev
-        if: steps.check_env_change.outputs.skipped != 'true'
