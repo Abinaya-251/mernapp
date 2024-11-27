@@ -1,16 +1,21 @@
 name: CD Workflow
-
 on:
   workflow_run:
-    workflows: ["CI Workflow"]
-    types: ["completed"]
-    branches:
-      - 'dev'
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+    workflows: [CI Workflow]
+    types: [completed]
 
+jobs:
+  on-failure:
+      runs-on: ubuntu-latest
+      if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+      steps:
+        - run: echo 'The triggering workflow failed'
+  on-success:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - run: echo 'The triggering workflow passed
+      
       - name: Checkout code
         uses: actions/checkout@v2
 
