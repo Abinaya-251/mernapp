@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - run: echo 'The triggering workflow passed
+      - run: echo 'The triggering workflow passed'
       
       - name: Checkout code
         uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
 
       - name: Copy docker-compose.yml and .env to EC2
         run: |
-          scp -o StrictHostKeyChecking=no docker-compose.yml .env ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/ubuntu/
+          scp -o StrictHostKeyChecking=no docker-compose.yaml .env ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/ubuntu/
 
 
       - name: Edit .env file on EC2 to update image tags
