@@ -8,6 +8,9 @@ on:
 jobs:
   build_push:
     runs-on: ubuntu-latest
+    outputs:
+      frontend_tag: ${{ steps.set_output.outputs.frontend_tag }}
+      backend_tag: ${{ steps.set_output.outputs.backend_tag }}
 
     steps:
       - name: Checkout code
@@ -47,20 +50,24 @@ jobs:
           aws ecr-public get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin public.ecr.aws/d6g9y3v8
 
       - name: Build frontend Docker image
+        id: frontend_build
         run: |
           FRONTEND_TAG="$(date +%s)"
           docker build -t frontend:$FRONTEND_TAG -f ./frontend/dockerfile-frontend ./frontend
           docker tag frontend:$FRONTEND_TAG public.ecr.aws/d6g9y3v8/frontend/reactapp:$FRONTEND_TAG
           docker push public.ecr.aws/d6g9y3v8/frontend/reactapp:$FRONTEND_TAG
           echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
+          echo "::set-output name=frontend_tag::$FRONTEND_TAG"
 
       - name: Build backend Docker image
+        id: backend_build
         run: |
           BACKEND_TAG="$(date +%s)"
           docker build -t backend:$BACKEND_TAG -f ./backend/dockerfile-backend ./backend
           docker tag frontend:$FRONTEND_TAG public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
           docker push  public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
           echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
+          echo "::set-output name=backend_tag::$BACKEND_TAG"
 
       - name: Update .env file with new image tags
         run: |
@@ -70,6 +77,11 @@ jobs:
         run: |
           echo "FRONTEND_TAG=${{ env.FRONTEND_TAG }}"
           echo "BACKEND_TAG=${{ env.BACKEND_TAG }}"
+      - name: Set output for deploy job
+        id: set_output
+        run: |
+          echo "::set-output name=frontend_tag::${{ steps.frontend_build.outputs.FRONTEND_TAG }}"
+          echo "::set-output name=backend_tag::${{ steps.backend_build.outputs.BACKEND_TAG }}"
 
   deploy:
     needs: build_push
@@ -93,10 +105,10 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Debug deploy FRONTEND_TAG and BACKEND_TAG
+      - name: Debug FRONTEND_TAG and BACKEND_TAG
         run: |
-          echo "FRONTEND_TAG=${{ env.FRONTEND_TAG }}"
-          echo "BACKEND_TAG=${{ env.BACKEND_TAG }}"
+          echo "FRONTEND_TAG=${{ needs.build_push.outputs.frontend_tag }}"
+          echo "BACKEND_TAG=${{ needs.build_push.outputs.backend_tag }}"
           
       - name: Set up SSH to EC2
         uses: appleboy/ssh-action@master
@@ -116,8 +128,8 @@ jobs:
       - name: Update .env file on EC2 with image tag values
         run: |
          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
-         sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${{ env.FRONTEND_TAG }}|g" /home/ubuntu/.env
-         sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${{ env.BACKEND_TAG }}|g" /home/ubuntu/.env
+         sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${{ needs.build_push.outputs.frontend_tag }}|g" /home/ubuntu/.env
+         sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${{ needs.build_push.outputs.backend_tag }}|g" /home/ubuntu/.env
          EOF
       - name: Run docker-compose down on EC2
         run: |
