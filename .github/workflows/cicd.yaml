@@ -92,7 +92,7 @@ jobs:
 
       - name: Delete existing .env and docker-compose.yml on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "rm -f /home/ubuntu/.env /home/ubuntu/docker-compose.yaml || true"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sudo rm -f /home/ubuntu/.env /home/ubuntu/docker-compose.yaml || true"
 
       - name: Copy docker-compose.yml and .env to EC2
         run: |
