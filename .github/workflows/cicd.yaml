@@ -107,8 +107,8 @@ jobs:
       - name: Update .env file on EC2 with image tag values
         run: |
          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
-         sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${{ env.FRONTEND_TAG }}|g" /home/ubuntu/.env
-         sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${{ env.BACKEND_TAG }}|g" /home/ubuntu/.env
+         sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${FRONTEND_TAG}|g" /home/ubuntu/.env
+         sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${BACKEND_TAG}|g" /home/ubuntu/.env
          EOF
       - name: Run docker-compose down on EC2
         run: |
