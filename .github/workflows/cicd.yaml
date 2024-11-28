@@ -64,7 +64,7 @@ jobs:
         run: |
           BACKEND_TAG="$(date +%s)"
           docker build -t backend:$BACKEND_TAG -f ./backend/dockerfile-backend ./backend
-          docker tag frontend:$FRONTEND_TAG public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
+          docker tag backend:$BACKTEND_TAG public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
           docker push  public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
           echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
           echo "::set-output name=backend_tag::$BACKEND_TAG"
