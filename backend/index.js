@@ -10,7 +10,7 @@ app.use(cors());
 
 app.get('/', (req, res) => {
     const hostname = os.hostname();
-    res.send(`Hello, from ${hostname}`);
+    res.send(`Hello from ${hostname}`);
 });
 
 app.listen(PORT, () => {
