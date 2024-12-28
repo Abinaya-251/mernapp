@@ -1,0 +1,29 @@
+pipeline {
+    agent any 
+    environment {
+        gitcredentials = credentials('gitcrede')
+        
+    }
+    stages {
+        stage('git checkout') {
+            steps {
+                sh "git clone https://github.com/Abinaya-251/mernapp.git --depth=1 --branch main"
+            }
+        }
+        stage('check code') {
+            steps {
+                sh "cd mernapp && ls -lrt"
+                echo "$gitcredentials_USR"
+                echo "$gitcredentials_PSW"
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh "rm -rf mernapp"
+            echo "completed pipeline execution..."
+        }
+    }
+    
+}
