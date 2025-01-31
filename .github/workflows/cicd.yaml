@@ -1,140 +1,88 @@
-name: CI Workflow
-
+---
+name: CICD Workflow
 on:
   push:
     branches:
       - dev
-
 jobs:
-  build_push:
+  build:
     runs-on: ubuntu-latest
     outputs:
-      frontend_tag: ${{ steps.set_output.outputs.frontend_tag }}
-      backend_tag: ${{ steps.set_output.outputs.backend_tag }}
-
+      frontend_tag: ${{ steps.set_output.outputs.frontend_tag}}
+      backend_tag: ${{ steps.set_output.outputs.backend_tag}}
     steps:
-      - name: Checkout code
+      - name: Code Check out
         uses: actions/checkout@v2
-
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
+      - name: Set up Docker
+        uses: docker/setup-buildx-actions@v2
       - name: Cache Docker layers
         uses: actions/cache@v2
-        with:
-          path: ~/.cache/buildx
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Install dependencies for frontend
+        with: null
+        path: ~/.cache/buildx
+        key: ${{ runners.os}}-buildx-
+      - name: Install dependencies frontend
         working-directory: ./frontend
         run: |
           npm install
-
-      - name: Install dependencies for backend
+      - name: Install dependencies backend
         working-directory: ./backend
         run: |
-          npm install
-
-      - name: Set up AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        run: |
-          aws ecr-public get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin public.ecr.aws/d6g9y3v8
-
-      - name: Build frontend Docker image
-        id: frontend_build
-        run: |
-          FRONTEND_TAG="$(date +%s)"
-          docker build -t frontend:$FRONTEND_TAG -f ./frontend/dockerfile-frontend ./frontend
-          docker tag frontend:$FRONTEND_TAG public.ecr.aws/d6g9y3v8/frontend/reactapp:$FRONTEND_TAG
-          docker push public.ecr.aws/d6g9y3v8/frontend/reactapp:$FRONTEND_TAG
-          echo "FRONTEND_TAG=$FRONTEND_TAG" >> $GITHUB_ENV
-          echo "::set-output name=frontend_tag::$FRONTEND_TAG"
-
-      - name: Build backend Docker image
+          npm install 
+      - name: Dockerhub login
+        run: >
+          docker login --username abinaya251 --password
+          dckr_pat_mAwwiV8gVR_6ot3VVq8WXWVY5oQ
+      - name: Build backend image
         id: backend_build
-        run: |
-          BACKEND_TAG="$(date +%s)"
-          docker build -t backend:$BACKEND_TAG -f ./backend/dockerfile-backend ./backend
-          docker tag backend:$BACKEND_TAG public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
-          docker push  public.ecr.aws/d6g9y3v8/backend/nodeapp:$BACKEND_TAG
-          echo "BACKEND_TAG=$BACKEND_TAG" >> $GITHUB_ENV
-          echo "::set-output name=backend_tag::$BACKEND_TAG"
+        run: >
+          BACKEND_TAG="tet1"
 
-      - name: Update .env file with new image tags
-        run: |
-          sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${{ env.FRONTEND_TAG }}|g" .env
-          sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${{ env.BACKEND_TAG }}|g" .env
-      - name: Debug FRONTEND_TAG and BACKEND_TAG
-        run: |
-          echo "FRONTEND_TAG=${{ env.FRONTEND_TAG }}"
-          echo "BACKEND_TAG=${{ env.BACKEND_TAG }}"
-      - name: Set output for deploy job
+          docker build -t abinaya251/backend:$BACKEND_TAG -f ./backend/dockerfile-backend ./backend
+
+          docker push abinaya251/backend:$BACKEND_TAG
+      - name: Build frontend image
+        id: frontend_build
+        run: >
+          FRONTEND_TAG="tet1"
+
+          docker build -t abinaya251/frontend:$FRONTEND_TAG -f ./frontend/dockerfile-frontend ./frontend
+
+          docker push abinaya251/frontend:$FRONTEND_TAG
+      - name: Getoutput for deploy
         id: set_output
-        run: |
-          echo "::set-output name=frontend_tag::${{ steps.frontend_build.outputs.FRONTEND_TAG }}"
-          echo "::set-output name=backend_tag::${{ steps.backend_build.outputs.BACKEND_TAG }}"
+        run: >
+          echo "::set-output name=frontend_tag::${{
+          steps.frontend_build.outputs.FRONTEND_TAG }}"
 
+          echo "::set-output name=backend_tag::${{ steps.backend_build.outputs.BACKTEND_TAG }}"
   deploy:
-    needs: build_push
+    needs: build
     runs-on: ubuntu-latest
-
     steps:
-      - run: echo 'The triggering workflow passed'
-      - name: Deploy to Server 1
+      - name: Deploy job
         uses: easingthemes/ssh-deploy@main
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-          REMOTE_HOST: ${{ secrets.EC2_HOST }}
-          REMOTE_USER: ${{ secrets.EC2_USERNAME }}
-      - name: Configure SSH Key
+          SSH_PRIVAE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USERNAME: ${{ secrets.EC2_USERNAME }}
+      - name: Setup ssh
         run: |
-         mkdir -p ~/.ssh
-         echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-         chmod 600 ~/.ssh/id_rsa
-         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Debug FRONTEND_TAG and BACKEND_TAG
-        run: |
-          echo "FRONTEND_TAG=${{ needs.build_push.outputs.frontend_tag }}"
-          echo "BACKEND_TAG=${{ needs.build_push.outputs.backend_tag }}"
-          
-      - name: Set up SSH to EC2
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+      - name: ssh
         uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          port: 22
-
-      - name: Delete existing .env and docker-compose.yml on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sudo rm -f /home/ubuntu/.env /home/ubuntu/docker-compose.yaml || true"
-
-      - name: Copy docker-compose.yml and .env to EC2
-        run: |
-          scp -o StrictHostKeyChecking=no docker-compose.yaml .env ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/ubuntu/
-      - name: Update .env file on EC2 with image tag values
-        run: |
-         ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
-         sed -i "s|FRONTEND_IMAGE_TAG=.*|FRONTEND_IMAGE_TAG=${{ needs.build_push.outputs.frontend_tag }}|g" /home/ubuntu/.env
-         sed -i "s|BACKEND_IMAGE_TAG=.*|BACKEND_IMAGE_TAG=${{ needs.build_push.outputs.backend_tag }}|g" /home/ubuntu/.env
-         EOF
-      - name: Run docker-compose down on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "cd /home/ubuntu && docker-compose down || true"
-
-      - name: Run docker-compose up on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "cd /home/ubuntu && docker-compose up -d"
+        with: null
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        port: 22
+      - name: copy .env
+        run: scp -o StrictHostKeyCheckinh=no docker-compose.yaml .env ${{
+          secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/${{
+          secrets.EC2_USERNAME }}
+      - name: run
+        run: >
+          ssh -o StrictHostKeyCheckinh=no ${{ secrets.EC2_USERNAME }}@${{
+          secrets.EC2_HOST }} "cd /home/ubuntu && docker-compose up -d"
