@@ -30,8 +30,7 @@ jobs:
           npm install 
       - name: Dockerhub login
         run: >
-          docker login --username abinaya251 --password
-          dckr_pat_mAwwiV8gVR_6ot3VVq8WXWVY5oQ
+          docker login --username abinaya251 --password ${{ secrets.TOKEN }}
       - name: Build backend image
         id: backend_build
         run: >
