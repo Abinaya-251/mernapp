@@ -17,9 +17,11 @@ jobs:
         uses: docker/setup-buildx-actions@v2
       - name: Cache Docker layers
         uses: actions/cache@v2
-        with: 
-         path: ~/.cache/buildx
-         key: ${{ runners.os}}-buildx-
+        with:
+          path: ~/.cache/buildx
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
       - name: Install dependencies frontend
         working-directory: ./frontend
         run: |
