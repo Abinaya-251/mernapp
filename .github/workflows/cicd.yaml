@@ -75,10 +75,10 @@ jobs:
       - name: ssh
         uses: appleboy/ssh-action@master
         with: null
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        port: 22
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          port: 22
       - name: copy .env
         run: scp -o StrictHostKeyCheckinh=no docker-compose.yaml .env ${{
           secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/${{
